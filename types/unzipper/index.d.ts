@@ -7,12 +7,37 @@
 // TypeScript Version: 2.2
 /// <reference types="node" />
 
-import { Readable, Stream, PassThrough, Duplex } from "stream";
-import { ClientRequest, RequestOptions } from "http";
+import { Readable, Stream, PassThrough, Duplex } from 'stream';
+import { ClientRequest, RequestOptions } from 'http';
 
 export interface PullStream extends Duplex {
     stream(eof: number | string, includeEof: boolean): PassThrough;
     pull(eof: number | string, includeEof: boolean): Promise<Buffer>;
+}
+
+export interface EntryProps {
+    path: string;
+}
+
+export interface EntryExtras {
+    signature: number;
+    partsize: number;
+    uncompressedSize: number;
+    compressedSize: number;
+    offset: number;
+    disknum: number;
+}
+
+export interface EntryVars {
+    signature?: number;
+    versionsNeededToExtract: number;
+    flags: number;
+    compressionMethod: number;
+    lastModifiedTime: number;
+    crc32: number;
+    compressedSize: number;
+    fileNameLength: number;
+    extraFieldLength: number;
 }
 
 export interface Entry extends PassThrough {
@@ -20,52 +45,52 @@ export interface Entry extends PassThrough {
     buffer(): Promise<Buffer>;
     path: string;
 
-    props: {
-        path: string;
-    };
+    props: EntryProps;
 
     type: string;
-    vars: {
-        signature?: number;
-        versionsNeededToExtract: number;
-        flags: number;
-        compressionMethod: number;
-        lastModifiedTime: number;
-        crc32: number;
-        compressedSize: number;
-        fileNameLength: number;
-        extraFieldLength: number;
-    };
+    vars: EntryVars;
 
-    extra: {
-        signature: number;
-        partsize: number;
-        uncompressedSize: number;
-        compressedSize: number;
-        offset: number;
-        disknum: number;
-    };
+    extra: EntryExtras;
 }
 
-export function unzip(
-    source: {
-        stream: Readable;
-        size: () => Promise<number>;
-    },
-    offset: number,
-    _password: string
-): Entry;
+export interface UnzipSource {
+    stream: Readable;
+    size: () => Promise<number>;
+}
+
+export function unzip(source: UnzipSource, offset: number, _password: string): Entry;
 
 export namespace Open {
     function file(filename: string): Promise<CentralDirectory>;
-    function url(
-        request: ClientRequest,
-        opt: string | RequestOptions
-    ): Promise<CentralDirectory>;
+    function url(request: ClientRequest, opt: string | RequestOptions): Promise<CentralDirectory>;
     function s3(client: any, params: any): Promise<CentralDirectory>;
 }
 
 export function BufferStream(entry: Entry): Promise<Buffer>;
+
+export interface CentralDirectoryFile {
+    signature: number;
+    versionMadeBy: number;
+    versionsNeededToExtract: number;
+    flags: number;
+    compressionMethod: number;
+    lastModifiedTime: number;
+    lastModifiedDate: number;
+    crc32: number;
+    compressedSize: number;
+    uncompressedSize: number;
+    fileNameLength: number;
+    extraFieldLength: number;
+    fileCommentLength: number;
+    diskNumber: number;
+    internalFileAttributes: number;
+    externalFileAttributes: number;
+    offsetToLocalFileHeader: number;
+    path: string;
+    comment: string;
+    stream: (password?: string) => Entry;
+    buffer: (password?: string) => Promise<Buffer>;
+}
 
 export interface CentralDirectory {
     signature: number;
@@ -76,31 +101,7 @@ export interface CentralDirectory {
     sizeOfCentralDirectory: number;
     offsetToStartOfCentralDirectory: number;
     commentLength: number;
-    files: [
-        {
-            signature: number;
-            versionMadeBy: number;
-            versionsNeededToExtract: number;
-            flags: number;
-            compressionMethod: number;
-            lastModifiedTime: number;
-            lastModifiedDate: number;
-            crc32: number;
-            compressedSize: number;
-            uncompressedSize: number;
-            fileNameLength: number;
-            extraFieldLength: number;
-            fileCommentLength: number;
-            diskNumber: number;
-            internalFileAttributes: number;
-            externalFileAttributes: number;
-            offsetToLocalFileHeader: number;
-            path: string;
-            comment: string;
-            stream: (password?: string) => Entry;
-            buffer: (password?: string) => Promise<Buffer>;
-        }
-    ];
+    files: CentralDirectoryFile[];
 }
 
 export class ParseOptions {
